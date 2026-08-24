@@ -1,6 +1,9 @@
+import "./globals.css";
+import NavBar from "@/components/NavBar";
+
 export const metadata = {
-  title: "Project ALPHA",
-  description: "AI Hybrid Investing Dashboard",
+  title: "Portfolio Tracker",
+  description: "Shared family portfolio tracker",
 };
 
 export default function RootLayout({
@@ -10,7 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="min-h-screen bg-slate-50 text-slate-900">
+        <NavBar />
+        {children}
+      </body>
     </html>
   );
 }
