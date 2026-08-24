@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { handleSessionExpired } from "@/lib/session-expired";
 
 export default function AddHoldingPage() {
   const router = useRouter();
@@ -39,6 +40,8 @@ export default function AddHoldingPage() {
     });
 
     setLoading(false);
+
+    if (handleSessionExpired(res, router)) return;
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

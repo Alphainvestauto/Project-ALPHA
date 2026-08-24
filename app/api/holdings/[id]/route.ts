@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { validateHoldingFields } from "@/lib/holdings-validation";
 
 interface UpdateHoldingInput {
   ticker?: string;
@@ -17,6 +18,9 @@ export async function PATCH(
   const { id } = await params;
   const supabase = await createClient();
   const body: UpdateHoldingInput = await request.json();
+
+  const validationError = validateHoldingFields(body);
+  if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
 
   const update: Record<string, unknown> = {};
   if (body.ticker !== undefined) update.ticker = body.ticker.trim().toUpperCase();

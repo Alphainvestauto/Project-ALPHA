@@ -28,23 +28,26 @@ async function finnhubGet<T>(path: string, params: Record<string, string>) {
   return (await res.json()) as T;
 }
 
-export async function getQuote(ticker: string): Promise<Quote> {
+export async function getQuote(ticker: string): Promise<Quote | null> {
   const data = await finnhubGet<{ c: number; pc: number }>("/quote", {
     symbol: ticker.toUpperCase(),
   });
-  return { current: data.c ?? 0, previousClose: data.pc ?? 0 };
+  // Finnhub returns c: 0 (HTTP 200) for unknown symbols rather than an error,
+  // and a real quote is never exactly $0 — treat that as "no data".
+  if (!data.c) return null;
+  return { current: data.c, previousClose: data.pc || data.c };
 }
 
 export async function getQuotes(
   tickers: string[]
-): Promise<Record<string, Quote>> {
+): Promise<Record<string, Quote | null>> {
   const unique = Array.from(new Set(tickers.map((t) => t.toUpperCase())));
   const results = await Promise.all(
     unique.map(async (ticker) => {
       try {
         return [ticker, await getQuote(ticker)] as const;
       } catch {
-        return [ticker, { current: 0, previousClose: 0 }] as const;
+        return [ticker, null] as const;
       }
     })
   );

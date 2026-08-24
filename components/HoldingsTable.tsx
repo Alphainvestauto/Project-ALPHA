@@ -10,6 +10,8 @@ export default function HoldingsTable({ holdings }: { holdings: EnrichedHolding[
     );
   }
 
+  const anyPriceUnavailable = holdings.some((h) => h.priceUnavailable);
+
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
       <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -36,31 +38,55 @@ export default function HoldingsTable({ holdings }: { holdings: EnrichedHolding[
               <td className="px-4 py-3 text-slate-500">{h.sector || "Unknown"}</td>
               <td className="px-4 py-3 text-right">{h.quantity}</td>
               <td className="px-4 py-3 text-right">{formatCurrency(h.cost_basis)}</td>
-              <td className="px-4 py-3 text-right">{formatCurrency(h.currentPrice)}</td>
+              <td className="px-4 py-3 text-right">
+                {h.priceUnavailable ? (
+                  <span
+                    className="text-slate-400"
+                    title="Live price unavailable — showing your cost basis instead"
+                  >
+                    {formatCurrency(h.currentPrice)}*
+                  </span>
+                ) : (
+                  formatCurrency(h.currentPrice)
+                )}
+              </td>
               <td className="px-4 py-3 text-right font-medium">
                 {formatCurrency(h.marketValue)}
               </td>
               <td
                 className={`px-4 py-3 text-right ${
-                  h.todayChange >= 0 ? "text-emerald-600" : "text-red-600"
+                  h.priceUnavailable
+                    ? "text-slate-400"
+                    : h.todayChange >= 0
+                    ? "text-emerald-600"
+                    : "text-red-600"
                 }`}
               >
-                {formatPct(h.todayChangePct, { signed: true })}
+                {h.priceUnavailable ? "—" : formatPct(h.todayChangePct, { signed: true })}
               </td>
               <td
                 className={`px-4 py-3 text-right ${
-                  h.gainLoss >= 0 ? "text-emerald-600" : "text-red-600"
+                  h.priceUnavailable
+                    ? "text-slate-400"
+                    : h.gainLoss >= 0
+                    ? "text-emerald-600"
+                    : "text-red-600"
                 }`}
               >
-                {formatCurrency(h.gainLoss, { signed: true })}
+                {h.priceUnavailable ? "—" : formatCurrency(h.gainLoss, { signed: true })}
               </td>
               <td className="px-4 py-3 text-right">
-                {h.dividend_yield ? formatPct(h.dividend_yield) : "—"}
+                {h.dividend_yield != null ? formatPct(h.dividend_yield) : "—"}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {anyPriceUnavailable && (
+        <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-400">
+          * Live price unavailable right now — showing cost basis instead of today's change or gain/loss.
+        </p>
+      )}
     </div>
   );
 }

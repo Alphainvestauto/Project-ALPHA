@@ -14,6 +14,7 @@ export interface Holding {
 export interface EnrichedHolding extends Holding {
   currentPrice: number;
   previousClose: number;
+  priceUnavailable: boolean;
   marketValue: number;
   costValue: number;
   gainLoss: number;
@@ -25,15 +26,15 @@ export interface EnrichedHolding extends Holding {
 
 export function enrichHoldings(
   holdings: Holding[],
-  quotes: Record<string, Quote>
+  quotes: Record<string, Quote | null>
 ): EnrichedHolding[] {
   return holdings.map((h) => {
-    const quote = quotes[h.ticker.toUpperCase()] ?? {
-      current: 0,
-      previousClose: 0,
-    };
-    const currentPrice = quote.current || h.cost_basis;
-    const previousClose = quote.previousClose || currentPrice;
+    const quote = quotes[h.ticker.toUpperCase()];
+    const priceUnavailable = !quote;
+    // Fall back to cost basis so totals don't collapse to zero, but callers
+    // should use priceUnavailable to avoid presenting this as a real quote.
+    const currentPrice = quote?.current ?? h.cost_basis;
+    const previousClose = quote?.previousClose ?? currentPrice;
 
     const marketValue = currentPrice * h.quantity;
     const costValue = h.cost_basis * h.quantity;
@@ -52,6 +53,7 @@ export function enrichHoldings(
       ...h,
       currentPrice,
       previousClose,
+      priceUnavailable,
       marketValue,
       costValue,
       gainLoss,

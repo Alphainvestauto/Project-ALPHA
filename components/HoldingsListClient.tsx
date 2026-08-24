@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Holding } from "@/lib/portfolio";
+import { handleSessionExpired } from "@/lib/session-expired";
 
 export default function HoldingsListClient({ holdings }: { holdings: Holding[] }) {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function HoldingsListClient({ holdings }: { holdings: Holding[] }
 
     const res = await fetch(`/api/holdings/${id}`, { method: "DELETE" });
     setDeletingId(null);
+
+    if (handleSessionExpired(res, router)) return;
 
     if (!res.ok) {
       setError("Could not delete that holding. Try again.");
@@ -56,7 +59,7 @@ export default function HoldingsListClient({ holdings }: { holdings: Holding[] }
               <td className="px-4 py-3 text-right">${h.cost_basis.toFixed(2)}</td>
               <td className="px-4 py-3 text-slate-500">{h.purchase_date || "—"}</td>
               <td className="px-4 py-3 text-right">
-                {h.dividend_yield ? `${h.dividend_yield.toFixed(2)}%` : "—"}
+                {h.dividend_yield != null ? `${h.dividend_yield.toFixed(2)}%` : "—"}
               </td>
               <td className="px-4 py-3 text-right">
                 <button

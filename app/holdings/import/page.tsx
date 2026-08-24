@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
+import { handleSessionExpired } from "@/lib/session-expired";
 
 interface ParsedRow {
   ticker: string;
@@ -86,6 +87,8 @@ export default function ImportHoldingsPage() {
     });
 
     setSubmitting(false);
+
+    if (handleSessionExpired(res, router)) return;
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

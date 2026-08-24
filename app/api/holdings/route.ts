@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { enrichTicker } from "@/lib/finnhub";
+import { validateHoldingFields } from "@/lib/holdings-validation";
 
 interface NewHoldingInput {
   ticker: string;
@@ -11,13 +12,17 @@ interface NewHoldingInput {
   dividend_yield?: number | null;
 }
 
-function validate(input: Partial<NewHoldingInput>): string | null {
-  if (!input.ticker || typeof input.ticker !== "string") return "Ticker is required.";
-  if (typeof input.quantity !== "number" || input.quantity <= 0)
-    return `Quantity for ${input.ticker} must be a positive number.`;
-  if (typeof input.cost_basis !== "number" || input.cost_basis < 0)
-    return `Cost basis for ${input.ticker} must be zero or more.`;
-  return null;
+// Cap how many rows are enriched from Finnhub at once (2 calls/row) so a
+// large CSV import doesn't burst past the free-tier rate limit.
+const ENRICH_BATCH_SIZE = 5;
+
+async function buildRows(rows: NewHoldingInput[]) {
+  const built: Awaited<ReturnType<typeof buildRow>>[] = [];
+  for (let i = 0; i < rows.length; i += ENRICH_BATCH_SIZE) {
+    const batch = rows.slice(i, i + ENRICH_BATCH_SIZE);
+    built.push(...(await Promise.all(batch.map(buildRow))));
+  }
+  return built;
 }
 
 async function buildRow(input: NewHoldingInput) {
@@ -65,11 +70,11 @@ export async function POST(request: Request) {
   const rows: NewHoldingInput[] = Array.isArray(body) ? body : [body];
 
   for (const row of rows) {
-    const error = validate(row);
-    if (error) return NextResponse.json({ error }, { status: 400 });
+    const error = validateHoldingFields(row, { requireCore: true });
+    if (error) return NextResponse.json({ error: `${row.ticker || "Row"}: ${error}` }, { status: 400 });
   }
 
-  const built = await Promise.all(rows.map(buildRow));
+  const built = await buildRows(rows);
 
   const { data, error } = await supabase.from("holdings").insert(built).select();
 

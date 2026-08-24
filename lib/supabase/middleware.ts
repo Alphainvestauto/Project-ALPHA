@@ -36,6 +36,14 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+
+  if (!user && isApiRoute) {
+    // A redirect here would turn into a 405 on the client's fetch (redirects
+    // are followed as GET/POST to /login, which doesn't handle them), hiding
+    // the real "please sign in again" cause. A plain 401 lets callers detect it.
+    return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
 
   if (!user && !isLoginPage) {
     const url = request.nextUrl.clone();
